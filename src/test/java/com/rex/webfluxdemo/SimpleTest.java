@@ -1,12 +1,15 @@
 package com.rex.webfluxdemo;
 
 
+import com.rex.webfluxdemo.model.MyEvent;
 import com.rex.webfluxdemo.model.User;
 import org.junit.Test;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class SimpleTest {
@@ -45,5 +48,19 @@ public class SimpleTest {
                 .log()  // 2
                 .take(10)   // 3
                 .blockLast();
+    }
+
+    @Test
+    public void webClientTest4() {
+        Flux<MyEvent> eventFlux = Flux.interval(Duration.ofSeconds(1))
+                .map(l -> new MyEvent(System.currentTimeMillis(), "message-" + l)).take(5); // 1
+        WebClient webClient = WebClient.create("http://localhost:8080");
+        webClient
+                .post().uri("/events")
+                .contentType(MediaType.APPLICATION_STREAM_JSON) // 2
+                .body(eventFlux, MyEvent.class) // 3
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
     }
 }
